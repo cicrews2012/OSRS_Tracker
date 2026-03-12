@@ -528,17 +528,20 @@ function updateGemValues() {
     const qty = gemQty[gem]||0;
     const totalGP = locked ? 0 : qty * bestGP;
 
-    // Also compute raw/ench separately for display
+    // Show raw/ench for the SAME jewellery type as the best item so columns are consistent
     const rows = JEWELLERY.filter(j => j[1]===gem);
     const rc = runeCost(gem);
-    let bestRawGP=0, bestEnchGP=-Infinity;
-    for (const [,,craftLvl,,magicLvl,rawItem,enchItem] of rows) {
+    let bestRow = null, bestRowGP = -Infinity;
+    for (const row of rows) {
+      const [,,craftLvl,,magicLvl,rawItem,enchItem] = row;
       if (!canCraft(craftLvl)) continue;
       const r = prices[rawItem]||0;
       const e = canEnchant(magicLvl) ? (prices[enchItem]||0)-rc : -Infinity;
-      if (r>bestRawGP) bestRawGP=r;
-      if (e>bestEnchGP) bestEnchGP=e;
+      const rowBest = Math.max(r, e > -Infinity ? e : 0);
+      if (rowBest > bestRowGP) { bestRowGP = rowBest; bestRow = row; }
     }
+    const bestRawGP  = bestRow ? (prices[bestRow[5]]||0) : 0;
+    const bestEnchGP = bestRow && canEnchant(bestRow[4]) ? (prices[bestRow[6]]||0)-rc : -Infinity;
 
     const pillHtml = locked
       ? `<span class="pill locked">🔒 Locked</span>`
