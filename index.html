@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLM Haul Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0a0e17;
+  --bg2:      #111827;
+  --bg3:      #1a2332;
+  --border:   #2a3a50;
+  --gold:     #c9963a;
+  --gold-lt:  #f0c060;
+  --gold-dim: #7a5c20;
+  --text:     #d4c8b0;
+  --text-dim: #8a8070;
+  --text-lt:  #f0e8d8;
+  --green:    #3a7a4a;
+  --green-lt: #6aaa7a;
+  --green-bg: #0d2018;
+  --red:      #7a2a2a;
+  --red-lt:   #cc5555;
+  --red-bg:   #1a0808;
+  --sapphire: #4a6fa5;
+  --emerald:  #2d7a4a;
+  --ruby:     #8a2828;
+  --diamond:  #6a7a8a;
+  --dstone:   #5a2d7a;
+  --radius:   6px;
+  --glow: 0 0 20px rgba(201,150,58,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* Subtle texture overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,150,58,0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+/* ── Header ── */
+header {
+  text-align: center;
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+header h1 {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 700;
+  color: var(--gold-lt);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 40px rgba(201,150,58,0.4);
+}
+header p {
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 0.95rem;
+}
+.price-status {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 14px;
+  padding: 6px 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-dim);
+  transition: background 0.3s;
+}
+.status-dot.live { background: var(--green-lt); box-shadow: 0 0 6px var(--green-lt); }
+.status-dot.error { background: var(--red-lt); }
+
+/* ── Section cards ── */
+.section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.section-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+.section-header:hover { background: #1f2d40; }
+.section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex: 1;
+}
+.section-chevron {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+.section.collapsed .section-chevron { transform: rotate(-90deg); }
+.section.collapsed .section-body { display: none; }
+.section-body { padding: 20px; }
+
+/* ── Tables ── */
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th {
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+th.right, td.right { text-align: right; }
+th.center, td.center { text-align: center; }
+td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(42,58,80,0.5);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr.stripe { background: rgba(255,255,255,0.02); }
+
+/* ── Inputs ── */
+input[type=number] {
+  background: rgba(201,150,58,0.08);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  color: var(--gold-lt);
+  font-family: 'Crimson Pro', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 5px 8px;
+  width: 90px;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input[type=number]:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,150,58,0.2);
+}
+input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
+
+/* ── GP values ── */
+.gp { font-weight: 600; color: var(--text-lt); }
+.gp.pos { color: var(--green-lt); }
+.gp.neg { color: var(--red-lt); }
+.gp.gold { color: var(--gold-lt); }
+.gp-live { font-size: 0.82rem; color: var(--text-dim); }
+
+/* ── Gem badges ── */
+.gem-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.gem-Sapphire   { background: rgba(74,111,165,0.2); color: #7aaee0; border: 1px solid rgba(74,111,165,0.4); }
+.gem-Emerald    { background: rgba(45,122,74,0.2);  color: #6acc8a; border: 1px solid rgba(45,122,74,0.4); }
+.gem-Ruby       { background: rgba(138,40,40,0.2);  color: #e07070; border: 1px solid rgba(138,40,40,0.4); }
+.gem-Diamond    { background: rgba(106,122,138,0.2);color: #b0c4d8; border: 1px solid rgba(106,122,138,0.4);}
+.gem-Dragonstone{ background: rgba(90,45,122,0.2);  color: #b080e0; border: 1px solid rgba(90,45,122,0.4); }
+
+/* ── Decision pills ── */
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill.enchant { background: var(--green-bg); color: var(--green-lt); border: 1px solid var(--green); }
+.pill.raw     { background: var(--bg3);       color: var(--text-dim); border: 1px solid var(--border); }
+
+/* ── Totals ── */
+.total-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(201,150,58,0.12), rgba(201,150,58,0.04));
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  margin-top: 8px;
+}
+.total-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  color: var(--gold-dim);
+  text-transform: uppercase;
+}
+.total-value {
+  font-family: 'Cinzel', serif;
+  font-size: 1.5rem;
+  color: var(--gold-lt);
+  text-shadow: var(--glow);
+}
+
+/* ── Coal ── */
+.coal-surplus { background: var(--green-bg); color: var(--green-lt); }
+.coal-deficit { background: var(--red-bg);   color: var(--red-lt); }
+.coal-bar {
+  display: grid; grid-template-columns: 1fr 120px 1fr;
+  gap: 16px; align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(42,58,80,0.5);
+}
+.coal-bar:last-child { border-bottom: none; }
+.coal-key { color: var(--text); font-size: 0.9rem; }
+.coal-val { text-align: right; font-weight: 600; font-size: 1rem; }
+.coal-note { color: var(--text-dim); font-size: 0.8rem; font-style: italic; }
+
+/* ── Grand total ── */
+.grand-total {
+  text-align: center;
+  padding: 28px 20px;
+  background: linear-gradient(135deg, rgba(201,150,58,0.1), rgba(201,150,58,0.03));
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  margin-top: 24px;
+}
+.grand-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin-bottom: 10px;
+}
+.grand-value {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700;
+  color: var(--gold-lt);
+  text-shadow: 0 0 40px rgba(201,150,58,0.5);
+  letter-spacing: 0.03em;
+}
+.grand-sub {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.grand-breakdown {
+  display: flex; justify-content: center; gap: 32px;
+  margin-top: 16px; flex-wrap: wrap;
+}
+.grand-item { text-align: center; }
+.grand-item-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.grand-item-val { font-size: 1.1rem; font-weight: 600; color: var(--text-lt); }
+
+/* ── Reset button ── */
+.btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  transition: all 0.2s;
+}
+.btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+.btn.primary {
+  background: rgba(201,150,58,0.15);
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+.btn.primary:hover { background: rgba(201,150,58,0.25); color: var(--gold-lt); }
+
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.toolbar-spacer { flex: 1; }
+
+/* ── Loading skeleton ── */
+.skeleton {
+  display: inline-block;
+  width: 60px; height: 14px;
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--border) 50%, var(--bg3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  table { font-size: 0.8rem; }
+  input[type=number] { width: 70px; }
+  th, td { padding: 7px 6px; }
+  .grand-breakdown { gap: 20px; }
+}
+
+/* ── Jewel table best-row highlight ── */
+tr.best-row td { background: rgba(201,150,58,0.06); }
+
+/* divider */
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+.note-box {
+  background: var(--bg3);
+  border-left: 3px solid var(--gold-dim);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+  font-size: 0.83rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 12px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <h1>⛏ Motherload Mine — Haul Tracker</h1>
+  <p>Enter your haul quantities. Prices load live from the OSRS Wiki GE API.</p>
+  <div class="price-status">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Loading prices…</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 1 — ORE HAUL
+════════════════════════════════════════════ -->
+<div class="section" id="sec-ore">
+  <div class="section-header" onclick="toggleSection('sec-ore')">
+    <span class="section-title">⛏ Ore Haul</span>
+    <span class="section-chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="toolbar">
+      <button class="btn" onclick="clearOre()">Clear ore</button>
+      <span class="toolbar-spacer"></span>
+      <span style="font-size:0.8rem;color:var(--text-dim);font-style:italic">🟡 Enter quantities from your session</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Qty Found</th>
+          <th class="right">GE Price</th>
+          <th>Action</th>
+          <th class="right">GP Value</th>
+        </tr>
+      </thead>
+      <tbody id="oreBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2 — GEMS
+════════════════════════════════════════════ -->
+<div class="section" id="sec-gems">
+  <div class="section-header" onclick="toggleSection('sec-gems')">
+    <span class="section-title">💎 Gems Found</span>
+    <span class="section-chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="toolbar">
+      <button class="btn" onclick="clearGems()">Clear gems</button>
+      <span class="toolbar-spacer"></span>
+      <span style="font-size:0.8rem;color:var(--text-dim);font-style:italic">Best jewellery &amp; enchant decision auto-calculated</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Gem</th>
+          <th>Qty</th>
+          <th class="right">Best Item</th>
+          <th class="right">Raw GP/ea</th>
+          <th class="right">Ench GP/ea</th>
+          <th class="right">Best GP/ea</th>
+          <th class="center">Decision</th>
+          <th class="right">Total GP</th>
+        </tr>
+      </thead>
+      <tbody id="gemBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3 — JEWELLERY CALCULATOR
+════════════════════════════════════════════ -->
+<div class="section collapsed" id="sec-jewel">
+  <div class="section-header" onclick="toggleSection('sec-jewel')">
+    <span class="section-title">💍 Jewellery Calculator — Full Breakdown</span>
+    <span class="section-chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:14px;font-style:italic">All 20 combinations — raw vs enchanted profit (rune cost deducted). Best per gem highlighted.</p>
+    <table id="jewelTable">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Gem</th>
+          <th class="right">Craft XP</th>
+          <th class="right">Raw Price</th>
+          <th class="right">Raw Profit</th>
+          <th>Enchanted Item</th>
+          <th class="right">Ench Price</th>
+          <th class="right">Rune Cost</th>
+          <th class="right">Ench Profit</th>
+          <th class="center">Best</th>
+        </tr>
+      </thead>
+      <tbody id="jewelBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 4 — COAL ANALYSIS
+════════════════════════════════════════════ -->
+<div class="section" id="sec-coal">
+  <div class="section-header" onclick="toggleSection('sec-coal')">
+    <span class="section-title">🪨 Coal Analysis</span>
+    <span class="section-chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div style="max-width:500px">
+      <div class="coal-bar">
+        <div class="coal-key">Coal from haul</div>
+        <div class="coal-val gp" id="coalFromHaul">0</div>
+        <div class="coal-note">from ore haul above</div>
+      </div>
+      <div class="coal-bar">
+        <div class="coal-key">Extra coal in bank</div>
+        <div class="coal-val"><input type="number" id="coalBank" min="0" value="0" oninput="recalc()"></div>
+        <div class="coal-note">enter any banked coal</div>
+      </div>
+      <div class="coal-bar">
+        <div class="coal-key">Total coal available</div>
+        <div class="coal-val gp" id="coalTotal">0</div>
+        <div class="coal-note">haul + bank</div>
+      </div>
+      <div class="coal-bar">
+        <div class="coal-key">Coal needed (Addy bars)</div>
+        <div class="coal-val gp" id="coalNeeded">0</div>
+        <div class="coal-note">3 coal per bar (BF halved)</div>
+      </div>
+      <div class="coal-bar" style="background:rgba(255,255,255,0.03);border-radius:4px;padding:14px 10px;margin-top:4px">
+        <div class="coal-key" style="font-weight:600;font-size:1rem">Surplus / (Deficit)</div>
+        <div class="coal-val" id="coalDiff" style="font-size:1.2rem">0</div>
+        <div class="coal-note" id="coalDiffNote">—</div>
+      </div>
+      <div class="coal-bar">
+        <div class="coal-key" id="coalActionLabel">—</div>
+        <div class="coal-val gp" id="coalActionVal">—</div>
+        <div class="coal-note" id="coalActionNote">—</div>
+      </div>
+    </div>
+    <div class="note-box" style="margin-top:16px">
+      BF coal halved: Addy = 3/bar · Rune = 4/bar · Gold = 0 · Mith = not worth smelting<br>
+      Coffer cost: ~72k/hr on BF worlds — deduct from grand total for true net profit
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     GRAND TOTAL
+════════════════════════════════════════════ -->
+<div class="grand-total">
+  <div class="grand-label">⚔ Grand Total GP This Session</div>
+  <div class="grand-value" id="grandTotal">0 gp</div>
+  <div class="grand-sub">All ore is free — every GP shown is pure profit</div>
+  <div class="grand-breakdown">
+    <div class="grand-item">
+      <div class="grand-item-label">Ore GP</div>
+      <div class="grand-item-val gp" id="gtOre">0</div>
+    </div>
+    <div class="grand-item">
+      <div class="grand-item-label">Gem GP</div>
+      <div class="grand-item-val gp" id="gtGem">0</div>
+    </div>
+    <div class="grand-item">
+      <div class="grand-item-label">Coal ±</div>
+      <div class="grand-item-val gp" id="gtCoal">0</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════
+const ITEM_IDS = {
+  // Ores & bars
+  'Gold ore': 444, 'Mithril ore': 447, 'Adamantite ore': 449,
+  'Runite ore': 451, 'Coal': 453, 'Gold bar': 2357, 'Adamantite bar': 2361,
+  // Gems
+  'Sapphire': 1623, 'Emerald': 1621, 'Ruby': 1619, 'Diamond': 1617, 'Dragonstone': 1615,
+  // Runes
+  'Cosmic rune': 564, 'Water rune': 555, 'Earth rune': 557,
+  // Rings raw
+  'Sapphire ring': 1637, 'Emerald ring': 1635, 'Ruby ring': 1633,
+  'Diamond ring': 1631, 'Dragonstone ring': 1629,
+  // Rings enchanted
+  'Ring of recoil': 2550, 'Ring of dueling(8)': 2552, 'Ring of forging': 2568,
+  'Ring of life': 2570, 'Ring of wealth': 2572,
+  // Necklaces raw
+  'Sapphire necklace': 1656, 'Emerald necklace': 1654, 'Ruby necklace': 1652,
+  'Diamond necklace': 1650, 'Dragonstone necklace': 1648,
+  // Necklaces enchanted
+  'Games necklace(8)': 3853, 'Binding necklace': 5521, 'Digsite pendant(5)': 11194,
+  'Phoenix necklace': 11090, 'Skills necklace(4)': 11105,
+  // Bracelets raw
+  'Sapphire bracelet': 11072, 'Emerald bracelet': 11076, 'Ruby bracelet': 11074,
+  'Diamond bracelet': 11078, 'Dragonstone bracelet': 11080,
+  // Bracelets enchanted
+  'Bracelet of clay': 11074, 'Castle wars bracelet(3)': 11631,
+  'Inoculation bracelet': 13226, 'Abyssal bracelet(5)': 21177, 'Combat bracelet(4)': 11118,
+  // Amulets raw
+  'Sapphire amulet': 1676, 'Emerald amulet': 1675, 'Ruby amulet': 1673,
+  'Diamond amulet': 1672, 'Dragonstone amulet': 1664,
+  // Amulets enchanted
+  'Amulet of magic': 1729, 'Amulet of defence': 1727, 'Amulet of strength': 1725,
+  'Amulet of power': 1723, 'Amulet of glory(4)': 1712,
+};
+
+const ORES = [
+  { name: 'Gold Ore',       priceKey: 'Gold ore',       action: 'Smelt → Gold Bars (jewellery)',  gpKey: 'Gold bar'       },
+  { name: 'Mithril Ore',    priceKey: 'Mithril ore',    action: 'Sell raw',                       gpKey: 'Mithril ore'    },
+  { name: 'Adamantite Ore', priceKey: 'Adamantite ore', action: 'Smelt → Adamant Bars at BF',     gpKey: 'Adamantite bar' },
+  { name: 'Runite Ore',     priceKey: 'Runite ore',     action: 'Sell raw (→ bars at 85 Smith)',  gpKey: 'Runite ore'     },
+  { name: 'Coal',           priceKey: 'Coal',           action: 'Used for Addy smelting',         gpKey: null             },
+];
+
+const GEMS = ['Sapphire','Emerald','Ruby','Diamond','Dragonstone'];
+
+// Enchant rune costs: [cosmic, water, earth] multipliers
+const ENCHANT_RUNES = {
+  Sapphire:    { cosmic:1, water:1, earth:0 },
+  Emerald:     { cosmic:1, water:0, earth:0 },
+  Ruby:        { cosmic:1, water:0, earth:0 },
+  Diamond:     { cosmic:1, water:0, earth:10 },
+  Dragonstone: { cosmic:1, water:15, earth:15 },
+};
+
+const JEWELLERY = [
+  // [type, gem, craftXP, rawItem, enchItem]
+  ['Ring','Sapphire',   40,  'Sapphire ring',        'Ring of recoil'         ],
+  ['Ring','Emerald',    55,  'Emerald ring',          'Ring of dueling(8)'     ],
+  ['Ring','Ruby',       70,  'Ruby ring',             'Ring of forging'        ],
+  ['Ring','Diamond',    85,  'Diamond ring',          'Ring of life'           ],
+  ['Ring','Dragonstone',100, 'Dragonstone ring',      'Ring of wealth'         ],
+  ['Necklace','Sapphire',   55,'Sapphire necklace',   'Games necklace(8)'      ],
+  ['Necklace','Emerald',    60,'Emerald necklace',    'Binding necklace'       ],
+  ['Necklace','Ruby',       75,'Ruby necklace',       'Digsite pendant(5)'     ],
+  ['Necklace','Diamond',    90,'Diamond necklace',    'Phoenix necklace'       ],
+  ['Necklace','Dragonstone',105,'Dragonstone necklace','Skills necklace(4)'   ],
+  ['Bracelet','Sapphire',   60,'Sapphire bracelet',   'Bracelet of clay'       ],
+  ['Bracelet','Emerald',    65,'Emerald bracelet',    'Castle wars bracelet(3)'],
+  ['Bracelet','Ruby',       80,'Ruby bracelet',       'Inoculation bracelet'   ],
+  ['Bracelet','Diamond',    95,'Diamond bracelet',    'Abyssal bracelet(5)'    ],
+  ['Bracelet','Dragonstone',110,'Dragonstone bracelet','Combat bracelet(4)'   ],
+  ['Amulet','Sapphire',    65, 'Sapphire amulet',    'Amulet of magic'        ],
+  ['Amulet','Emerald',     87.5,'Emerald amulet',    'Amulet of defence'      ],
+  ['Amulet','Ruby',        110,'Ruby amulet',         'Amulet of strength'     ],
+  ['Amulet','Diamond',     130,'Diamond amulet',      'Amulet of power'        ],
+  ['Amulet','Dragonstone', 150,'Dragonstone amulet',  'Amulet of glory(4)'    ],
+];
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let prices = {};   // itemName -> midpoint price
+let oreQty = {};   // ore name -> qty
+let gemQty = {};   // gem name -> qty
+
+// ════════════════════════════════════════════
+// PRICE FETCHING
+// ════════════════════════════════════════════
+async function fetchPrices() {
+  const dot  = document.getElementById('statusDot');
+  const txt  = document.getElementById('statusText');
+  dot.className = 'status-dot';
+  txt.textContent = 'Fetching live prices…';
+
+  // Collect all needed IDs
+  const ids = Object.values(ITEM_IDS);
+  const idSet = [...new Set(ids)];
+
+  // OSRS Wiki /latest returns all items; use a CORS proxy via allorigins
+  const url = 'https://prices.runescape.wiki/api/v1/osrs/latest';
+  
+  try {
+    // Try direct fetch first (works in modern browsers with CORS)
+    let data;
+    try {
+      const r = await fetch(url, {
+        headers: { 'User-Agent': 'MLM Haul Tracker - GitHub Pages app' }
+      });
+      if (!r.ok) throw new Error('direct fetch failed');
+      const j = await r.json();
+      data = j.data;
+    } catch {
+      // Fallback: use allorigins proxy
+      const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const r = await fetch(proxy);
+      if (!r.ok) throw new Error('proxy fetch failed');
+      const j = await r.json();
+      data = j.data;
+    }
+
+    // Build price map
+    for (const [name, id] of Object.entries(ITEM_IDS)) {
+      const entry = data[String(id)];
+      if (entry) {
+        const hi = entry.high || 0;
+        const lo = entry.low  || 0;
+        prices[name] = hi && lo ? Math.round((hi + lo) / 2) : (hi || lo || 0);
+      } else {
+        prices[name] = 0;
+      }
+    }
+
+    dot.className = 'status-dot live';
+    txt.textContent = `Prices live — updated ${new Date().toLocaleTimeString()}`;
+    renderAll();
+  } catch (e) {
+    dot.className = 'status-dot error';
+    txt.textContent = 'Price fetch failed — using fallback prices';
+    // Fallback prices (approximate)
+    Object.assign(prices, {
+      'Gold ore':107,'Mithril ore':150,'Adamantite ore':170,'Runite ore':10071,
+      'Coal':169,'Gold bar':107,'Adamantite bar':2032,
+      'Sapphire':495,'Emerald':700,'Ruby':1200,'Diamond':2600,'Dragonstone':7500,
+      'Cosmic rune':150,'Water rune':5,'Earth rune':5,
+      'Sapphire ring':480,'Emerald ring':660,'Ruby ring':1079,'Diamond ring':1957,'Dragonstone ring':11034,
+      'Ring of recoil':879,'Ring of dueling(8)':740,'Ring of forging':1100,'Ring of life':1727,'Ring of wealth':11200,
+      'Sapphire necklace':499,'Emerald necklace':705,'Ruby necklace':1193,'Diamond necklace':0,'Dragonstone necklace':0,
+      'Games necklace(8)':735,'Binding necklace':708,'Digsite pendant(5)':0,'Phoenix necklace':0,'Skills necklace(4)':0,
+      'Sapphire bracelet':582,'Emerald bracelet':764,'Ruby bracelet':1248,'Diamond bracelet':0,'Dragonstone bracelet':0,
+      'Bracelet of clay':398,'Castle wars bracelet(3)':914,'Inoculation bracelet':1300,'Abyssal bracelet(5)':0,'Combat bracelet(4)':0,
+      'Sapphire amulet':488,'Emerald amulet':717,'Ruby amulet':1196,'Diamond amulet':0,'Dragonstone amulet':0,
+      'Amulet of magic':398,'Amulet of defence':801,'Amulet of strength':1451,'Amulet of power':0,'Amulet of glory(4)':0,
+    });
+    renderAll();
+  }
+}
+
+// ════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════
+const gp = n => Number.isFinite(n) ? n.toLocaleString() + ' gp' : '—';
+const gpN = n => Number.isFinite(n) ? n.toLocaleString() : '—';
+
+function runeCost(gem) {
+  const r = ENCHANT_RUNES[gem];
+  if (!r) return 0;
+  return r.cosmic * (prices['Cosmic rune']||0)
+       + r.water  * (prices['Water rune']||0)
+       + r.earth  * (prices['Earth rune']||0);
+}
+
+// For each gem, compute best (type, rawGP, enchGP) across all 4 jewellery types
+function bestForGem(gem) {
+  const rows = JEWELLERY.filter(j => j[1] === gem);
+  const rc = runeCost(gem);
+  let bestRaw = { gp: 0, item: '—', type: '—' };
+  let bestEnch = { gp: 0, item: '—', type: '—' };
+  for (const [type,,,rawItem,enchItem] of rows) {
+    const rawGP  = prices[rawItem]  || 0;
+    const enchGP = (prices[enchItem] || 0) - rc;
+    if (rawGP  > bestRaw.gp)  bestRaw  = { gp: rawGP,  item: rawItem,  type };
+    if (enchGP > bestEnch.gp) bestEnch = { gp: enchGP, item: enchItem, type };
+  }
+  return { bestRaw, bestEnch, rc };
+}
+
+function skel() { return '<span class="skeleton"></span>'; }
+
+// ════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════
+function renderOre() {
+  const tb = document.getElementById('oreBody');
+  tb.innerHTML = '';
+  ORES.forEach((ore, i) => {
+    const qty = oreQty[ore.name] || 0;
+    const price = ore.gpKey ? (prices[ore.gpKey] || 0) : 0;
+    const gpVal = ore.gpKey ? qty * price : null;
+    const loaded = Object.keys(prices).length > 0;
+    const tr = document.createElement('tr');
+    if (i % 2 === 0) tr.className = 'stripe';
+    tr.innerHTML = `
+      <td><strong style="color:var(--text-lt)">${ore.name}</strong></td>
+      <td><input type="number" min="0" value="${qty}" data-ore="${ore.name}" oninput="setOre(this)"></td>
+      <td class="right gp-live">${loaded ? gpN(price) : skel()} gp</td>
+      <td style="color:var(--text-dim);font-style:italic;font-size:0.85rem">${ore.action}</td>
+      <td class="right gp ${gpVal>0?'pos':''}">${gpVal !== null ? gpN(gpVal) : '—'}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function renderGems() {
+  const tb = document.getElementById('gemBody');
+  tb.innerHTML = '';
+  const loaded = Object.keys(prices).length > 0;
+  GEMS.forEach((gem, i) => {
+    const qty = gemQty[gem] || 0;
+    const { bestRaw, bestEnch, rc } = bestForGem(gem);
+    const best = bestEnch.gp > bestRaw.gp ? bestEnch : bestRaw;
+    const isEnch = bestEnch.gp > bestRaw.gp;
+    const totalGP = qty * best.gp;
+    const tr = document.createElement('tr');
+    if (i % 2 === 0) tr.className = 'stripe';
+    tr.innerHTML = `
+      <td><span class="gem-badge gem-${gem}">${gem}</span></td>
+      <td><input type="number" min="0" value="${qty}" data-gem="${gem}" oninput="setGem(this)"></td>
+      <td style="font-size:0.82rem;color:var(--text-dim)">${loaded ? best.item : skel()}</td>
+      <td class="right gp">${loaded ? gpN(bestRaw.gp) : skel()}</td>
+      <td class="right gp">${loaded ? gpN(bestEnch.gp) : skel()}</td>
+      <td class="right gp gold" style="font-weight:700">${loaded ? gpN(best.gp) : skel()}</td>
+      <td class="center">
+        <span class="pill ${isEnch?'enchant':'raw'}">${isEnch?'✅ Enchant':'⚒ Sell Raw'}</span>
+      </td>
+      <td class="right gp ${totalGP>0?'pos':''}" style="font-weight:700">${gpN(totalGP)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function renderJewelTable() {
+  const tb = document.getElementById('jewelBody');
+  tb.innerHTML = '';
+  const loaded = Object.keys(prices).length > 0;
+
+  // Find best raw row per gem for highlighting
+  const bestRawPerGem = {};
+  const bestEnchPerGem = {};
+  GEMS.forEach(gem => {
+    const { bestRaw, bestEnch } = bestForGem(gem);
+    bestRawPerGem[gem]  = bestRaw.item;
+    bestEnchPerGem[gem] = bestEnch.item;
+  });
+
+  JEWELLERY.forEach(([type, gem, xp, rawItem, enchItem], i) => {
+    const rawGP  = prices[rawItem]  || 0;
+    const enchGP = prices[enchItem] || 0;
+    const rc     = runeCost(gem);
+    const enchProfit = enchGP - rc;
+    const isEnchBetter = enchProfit > rawGP && enchProfit > 0;
+    const { bestRaw } = bestForGem(gem);
+    const isBestRow = rawItem === bestRaw.item || enchItem === bestEnchPerGem[gem];
+    const tr = document.createElement('tr');
+    if (isBestRow) tr.className = 'best-row';
+    else if (i % 2 === 0) tr.className = 'stripe';
+    tr.innerHTML = `
+      <td style="color:var(--text-dim);font-size:0.85rem">${type}</td>
+      <td><span class="gem-badge gem-${gem}">${gem}</span></td>
+      <td class="right" style="color:var(--text-dim);font-size:0.85rem">${xp}</td>
+      <td class="right">${loaded ? gpN(rawGP) : skel()}</td>
+      <td class="right gp pos">${loaded ? gpN(rawGP) : skel()}</td>
+      <td style="font-size:0.82rem;color:var(--text-dim)">${enchItem}</td>
+      <td class="right">${loaded ? gpN(enchGP) : skel()}</td>
+      <td class="right" style="color:var(--red-lt);font-size:0.85rem">${loaded ? gpN(rc) : skel()}</td>
+      <td class="right gp ${enchProfit>0?'pos':enchProfit<0?'neg':''}">${loaded ? gpN(enchProfit) : skel()}</td>
+      <td class="center">
+        <span class="pill ${isEnchBetter?'enchant':'raw'}">${isEnchBetter?'✅ Ench':'⚒ Raw'}</span>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function renderCoal() {
+  const addyQty = oreQty['Adamantite Ore'] || 0;
+  const coalHaul = oreQty['Coal'] || 0;
+  const coalBank = parseInt(document.getElementById('coalBank').value) || 0;
+  const coalTotal = coalHaul + coalBank;
+  const coalNeeded = addyQty * 3;
+  const diff = coalTotal - coalNeeded;
+  const coalPrice = prices['Coal'] || 169;
+
+  document.getElementById('coalFromHaul').textContent = coalHaul.toLocaleString();
+  document.getElementById('coalTotal').textContent    = coalTotal.toLocaleString();
+  document.getElementById('coalNeeded').textContent   = coalNeeded.toLocaleString();
+
+  const diffEl = document.getElementById('coalDiff');
+  diffEl.textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString();
+  diffEl.className = 'coal-val ' + (diff >= 0 ? 'gp pos' : 'gp neg');
+
+  document.getElementById('coalDiffNote').textContent =
+    diff >= 0 ? 'surplus — sell extra on GE' : 'deficit — must BUY coal';
+
+  const lbl  = document.getElementById('coalActionLabel');
+  const val  = document.getElementById('coalActionVal');
+  const note = document.getElementById('coalActionNote');
+
+  if (diff >= 0) {
+    lbl.textContent  = 'GP from surplus coal';
+    val.textContent  = gpN(diff * coalPrice);
+    val.className    = 'coal-val gp pos';
+    note.textContent = 'sell on GE';
+  } else {
+    lbl.textContent  = 'Cost to buy deficit coal';
+    val.textContent  = '-' + gpN(Math.abs(diff) * coalPrice);
+    val.className    = 'coal-val gp neg';
+    note.textContent = 'deducted from total';
+  }
+}
+
+function calcGrandTotal() {
+  // Ore GP
+  let oreGP = 0;
+  for (const ore of ORES) {
+    if (!ore.gpKey) continue;
+    oreGP += (oreQty[ore.name] || 0) * (prices[ore.gpKey] || 0);
+  }
+  // Coal adjustment
+  const addyQty  = oreQty['Adamantite Ore'] || 0;
+  const coalHaul = oreQty['Coal'] || 0;
+  const coalBank = parseInt(document.getElementById('coalBank').value) || 0;
+  const coalTotal = coalHaul + coalBank;
+  const coalNeeded = addyQty * 3;
+  const diff = coalTotal - coalNeeded;
+  const coalPrice = prices['Coal'] || 169;
+  const coalGP = diff * coalPrice; // positive = earn, negative = spend
+
+  // Gem GP
+  let gemGP = 0;
+  for (const gem of GEMS) {
+    const qty = gemQty[gem] || 0;
+    const { bestRaw, bestEnch } = bestForGem(gem);
+    const best = bestEnch.gp > bestRaw.gp ? bestEnch : bestRaw;
+    gemGP += qty * best.gp;
+  }
+
+  const total = oreGP + gemGP + coalGP;
+
+  document.getElementById('grandTotal').textContent = gp(total);
+  document.getElementById('grandTotal').style.color = total > 0 ? 'var(--gold-lt)' : 'var(--red-lt)';
+  document.getElementById('gtOre').textContent  = gpN(oreGP);
+  document.getElementById('gtGem').textContent  = gpN(gemGP);
+  document.getElementById('gtCoal').textContent = (coalGP >= 0 ? '+' : '') + gpN(coalGP);
+  document.getElementById('gtCoal').className   = 'grand-item-val gp ' + (coalGP >= 0 ? 'pos' : 'neg');
+}
+
+function renderAll() {
+  renderOre();
+  renderGems();
+  renderJewelTable();
+  renderCoal();
+  calcGrandTotal();
+}
+
+function recalc() {
+  renderCoal();
+  calcGrandTotal();
+}
+
+// ════════════════════════════════════════════
+// INPUT HANDLERS
+// ════════════════════════════════════════════
+function setOre(input) {
+  oreQty[input.dataset.ore] = parseInt(input.value) || 0;
+  renderOre();
+  renderCoal();
+  calcGrandTotal();
+}
+
+function setGem(input) {
+  gemQty[input.dataset.gem] = parseInt(input.value) || 0;
+  renderGems();
+  calcGrandTotal();
+}
+
+function clearOre() {
+  oreQty = {};
+  renderOre();
+  renderCoal();
+  calcGrandTotal();
+}
+
+function clearGems() {
+  gemQty = {};
+  renderGems();
+  calcGrandTotal();
+}
+
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+// Build empty tables immediately, then fetch prices
+renderAll();
+fetchPrices();
+// Refresh prices every 5 minutes
+setInterval(fetchPrices, 5 * 60 * 1000);
+</script>
+</body>
+</html>
